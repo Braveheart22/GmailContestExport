@@ -1,0 +1,10 @@
+# Google OAuth credentials
+credentials.json
+token.pickle
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VSCode settings
+.vscode/
