@@ -20,13 +20,25 @@ service = build("gmail", "v1", credentials=creds)
 # GET ALL MESSAGES
 # ---------------------------------------
 
-results = service.users().messages().list(
-    userId="me",
-    labelIds=[LABEL_ID],
-    maxResults=500
-).execute()
+messages = []
+next_page_token = None
 
-messages = results.get("messages", [])
+while True:
+    request = service.users().messages().list(
+        userId="me",
+        labelIds=[LABEL_ID],
+        maxResults=500,
+        pageToken=next_page_token
+    )
+
+    results = request.execute()
+
+    messages.extend(results.get("messages", []))
+
+    next_page_token = results.get("nextPageToken")
+
+    if not next_page_token:
+        break
 
 print(f"\nFound {len(messages)} contest email(s).\n")
 
@@ -55,6 +67,9 @@ for msg in messages:
         id=msg["id"],
         format="full"
     ).execute()
+
+    headers = message.get("payload", {}).get("headers", [])
+    submission_date = next((h["value"] for h in headers if h["name"].lower() == "date"), "")
 
     payload = message["payload"]
 
@@ -90,6 +105,7 @@ for msg in messages:
     requirements = extract_field(r"Do you meet all of the requirements\?\s*</b>(.*?)<", decoded_body)
 
     rows.append({
+        "Submission Date": submission_date,
         "First Name": first_name,
         "Last Name": last_name,
         "Email": email,
