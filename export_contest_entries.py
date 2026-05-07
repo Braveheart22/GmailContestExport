@@ -5,15 +5,17 @@ import pandas as pd
 import os
 from email.message import EmailMessage
 from google_auth_oauthlib.flow import InstalledAppFlow
-
+from datetime import datetime
 from googleapiclient.discovery import build
+
+today = datetime.now().strftime("%Y-%m-%d")
 
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/gmail.send"
 ]
 BACKUP_RECIPIENT = "Maryellen@LoopLoc.com"
-OUTPUT_FILE = "2026_Gift_Contest.xlsx"
+OUTPUT_FILE = f"2026_Gift_Contest_{today}.xlsx"
 LABEL_ID = "Label_6083117079229242213"
 
 # ---------------------------------------
