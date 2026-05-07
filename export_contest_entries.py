@@ -2,17 +2,39 @@ import pickle
 import base64
 import re
 import pandas as pd
+import os
+from email.message import EmailMessage
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 from googleapiclient.discovery import build
 
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/gmail.send"
+]
+BACKUP_RECIPIENT = "Maryellen@LoopLoc.com"
+OUTPUT_FILE = "2026_Gift_Contest.xlsx"
 LABEL_ID = "Label_6083117079229242213"
 
 # ---------------------------------------
 # CONNECT TO GMAIL
 # ---------------------------------------
 
-with open("token.pickle", "rb") as token:
-    creds = pickle.load(token)
+creds = None
+
+if os.path.exists("token.pickle"):
+    with open("token.pickle", "rb") as token:
+        creds = pickle.load(token)
+
+if not creds or not creds.valid:
+    flow = InstalledAppFlow.from_client_secrets_file(
+        "credentials.json",
+        SCOPES
+    )
+    creds = flow.run_local_server(port=0)
+
+    with open("token.pickle", "wb") as token:
+        pickle.dump(creds, token)
 
 service = build("gmail", "v1", credentials=creds)
 
@@ -121,10 +143,61 @@ for msg in messages:
 
 df = pd.DataFrame(rows)
 
-output_file = "2026_Gift_Contest.xlsx"
+df.to_excel(OUTPUT_FILE, index=False)
 
-df.to_excel(output_file, index=False)
+# ---------------------------------------
+# EMAIL BACKUP COPY
+# ---------------------------------------
+
+def send_backup_email(service, recipient, attachment_path, entry_count):
+    message = EmailMessage()
+
+    message["To"] = recipient
+    message["From"] = "me"
+    message["Subject"] = "2026 Gift Contest Daily Export"
+
+    message.set_content(
+        f"""Good morning,
+
+Attached is the latest 2026 Gift Contest export.
+
+Total entries exported: {entry_count}
+
+This is an automated backup email.
+"""
+    )
+
+    with open(attachment_path, "rb") as file:
+        file_data = file.read()
+
+    message.add_attachment(
+        file_data,
+        maintype="application",
+        subtype="vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        filename=attachment_path
+    )
+
+    encoded_message = base64.urlsafe_b64encode(message.as_bytes()).decode()
+
+    create_message = {
+        "raw": encoded_message
+    }
+
+    service.users().messages().send(
+        userId="me",
+        body=create_message
+    ).execute()
+
+
+send_backup_email(
+    service=service,
+    recipient=BACKUP_RECIPIENT,
+    attachment_path=OUTPUT_FILE,
+    entry_count=len(rows)
+)
+
+print(f"Backup email sent to {BACKUP_RECIPIENT}")
 
 print(f"\nSUCCESS!")
 print(f"Exported {len(rows)} entries to:")
-print(output_file)
+print(OUTPUT_FILE)
