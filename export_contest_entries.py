@@ -127,9 +127,7 @@ for msg in messages:
     first_name = extract_field(r"First Name:\s*</b>(.*?)<", decoded_body)
     last_name = extract_field(r"Last Name:\s*</b>(.*?)<", decoded_body)
     email = extract_field(r"Email Address:\s*</b>(.*?)<", decoded_body)
-    phone = extract_field(r"Phone number:\s*</b>(.*?)<", decoded_body)
-    address = extract_field(r"Address:\s*</b>(.*?)<", decoded_body)
-    city_state_zip = extract_field(r"City, State, Zip:\s*</b>(.*?)<", decoded_body)
+    zip_code = extract_field(r"Zip:\s*</b>(.*?)<", decoded_body)
     requirements = extract_field(r"Do you meet all of the requirements\?\s*</b>(.*?)<", decoded_body)
 
     rows.append({
@@ -137,9 +135,7 @@ for msg in messages:
         "First Name": first_name,
         "Last Name": last_name,
         "Email": email,
-        "Phone": phone,
-        "Address": address,
-        "City/State/Zip": city_state_zip,
+        "Zip": zip_code,
         "Requirements": requirements
     })
 
