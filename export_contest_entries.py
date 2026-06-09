@@ -1,6 +1,7 @@
 import pickle
 import base64
 import re
+import time
 import pandas as pd
 import os
 from email.message import EmailMessage
@@ -71,8 +72,23 @@ while True:
 print(f"\nFound {len(messages)} contest email(s).\n")
 
 # ---------------------------------------
-# HELPER FUNCTION
+# HELPER FUNCTIONS
 # ---------------------------------------
+
+def get_message_with_retry(service, msg_id, retries=3, delay=5):
+    for attempt in range(retries):
+        try:
+            return service.users().messages().get(
+                userId="me",
+                id=msg_id,
+                format="full"
+            ).execute()
+        except Exception as e:
+            if attempt < retries - 1:
+                print(f"  Warning: fetch failed for {msg_id} (attempt {attempt + 1}): {e}. Retrying in {delay}s...")
+                time.sleep(delay)
+            else:
+                raise
 
 def extract_field(pattern, text):
     match = re.search(pattern, text, re.IGNORECASE)
@@ -90,11 +106,7 @@ rows = []
 
 for msg in messages:
 
-    message = service.users().messages().get(
-        userId="me",
-        id=msg["id"],
-        format="full"
-    ).execute()
+    message = get_message_with_retry(service, msg["id"])
 
     headers = message.get("payload", {}).get("headers", [])
     submission_date = next((h["value"] for h in headers if h["name"].lower() == "date"), "")
